@@ -1,0 +1,17 @@
+FROM golang:GO_VER AS build-env
+ARG PKG_PATH
+ARG APP_VERSION
+WORKDIR /go/src/$PKG_PATH
+ADD . /go/src/$PKG_PATH
+RUN go build -tags timetzdata -ldflags "-s -w -X $PKG_PATH/pkg/version.VERSION=$APP_VERSION"
+
+FROM ubuntu:BASE_IMAGE_VER
+ARG PKG_PATH
+ARG APP_NAME
+ARG APP_VERSION
+
+WORKDIR /app
+COPY --from=build-env /go/src/$PKG_PATH/$APP_NAME /app
+RUN mkdir -p /app/conf && touch /app/conf/app.yaml
+RUN echo "#!/usr/bin/dumb-init /bin/sh \n ./$APP_NAME \$@" > ./entrypoint.sh && chmod +x ./entrypoint.sh
+ENTRYPOINT ["./entrypoint.sh"]
