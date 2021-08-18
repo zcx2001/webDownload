@@ -1,7 +1,7 @@
 .PHONY: clean buildImage pushImage version
 
-GO_VER = 1.16.6
-BASE_IMAGE_VER = 20.04-base-0216
+GO_VER = 1.16.7
+BASE_IMAGE_VER = 20.04-base-0818
 
 APP_NAME = webDownload
 APP_VERSION = $(shell git describe --tags --always --dirty="-dev")
