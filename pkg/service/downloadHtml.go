@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,13 +17,8 @@ import (
 	"strings"
 )
 
-func DownloadHtml(urlAddr string, rewrite bool) (err error) {
-	u, err := url.ParseRequestURI(urlAddr)
-	if err != nil {
-		return
-	}
-
-	bs, err := downloadFile(u, rewrite)
+func DownloadHtml(urlAddr *url.URL, rewrite bool) (err error) {
+	bs, err := downloadFile(urlAddr, rewrite)
 	if err != nil {
 		return
 	}
@@ -32,13 +28,13 @@ func DownloadHtml(urlAddr string, rewrite bool) (err error) {
 		return
 	}
 
-	findLink(u, doc)
+	findLink(urlAddr, doc)
 
-	findImg(u, doc)
+	findImg(urlAddr, doc)
 
-	findScript(u, doc)
+	findScript(urlAddr, doc)
 
-	findA(u, doc)
+	findA(urlAddr, doc)
 
 	return
 }
@@ -58,7 +54,7 @@ func findA(addr *url.URL, doc *goquery.Document) {
 					return
 				}
 				logger.Log.Debug("Discover A", zap.String("url", addr.ResolveReference(imgurl).String()))
-				_ = DownloadHtml(addr.ResolveReference(imgurl).String(), false)
+				_ = DownloadHtml(addr.ResolveReference(imgurl), false)
 			}
 		}
 	})
@@ -154,7 +150,13 @@ func findImg(addr *url.URL, doc *goquery.Document) {
 }
 
 func downloadFile(addr *url.URL, rewrite bool) (bs []byte, err error) {
-	filename := path.Join(addr.Host, path.Dir(addr.Path), path.Base(addr.Path))
+	host, _, err := net.SplitHostPort(addr.Host)
+	if err != nil {
+		logger.Log.Error("splitHostPort error", zap.Error(err))
+		return
+	}
+
+	filename := path.Join(host, path.Dir(addr.Path), path.Base(addr.Path))
 
 	err = os.MkdirAll(path.Dir(filename), os.ModePerm)
 	if err != nil {

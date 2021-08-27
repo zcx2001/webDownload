@@ -4,8 +4,11 @@ import (
 	"errors"
 	"github.com/spf13/cobra"
 	"github.com/zcx2001/goshare/httpService"
+	"github.com/zcx2001/goshare/logger"
 	"github.com/zcx2001/webDownload/pkg/service"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 )
@@ -29,12 +32,23 @@ var startCmd = &cobra.Command{
 		quit := make(chan os.Signal)
 		signal.Notify(quit, os.Interrupt)
 
-		err = service.DownloadHtml(args[0], true)
+		urlAddr, err := url.ParseRequestURI(args[0])
+		if err != nil {
+			return
+		}
 
+		err = service.DownloadHtml(urlAddr, true)
+
+		logger.Log.Debug("download ok")
+
+		host, _, err := net.SplitHostPort(urlAddr.Host)
+		if err != nil {
+			return
+		}
 		// 初始化网站服务
 		web := httpService.New(
 			httpService.WithPort("8080"),
-			httpService.WithStatic("/", http.Dir("demo.mxyhn.xyz:8020")),
+			httpService.WithStatic("/", http.Dir(host)),
 		)
 		web.Start()
 
